@@ -1,0 +1,72 @@
+import pymysql
+import pandas as pd
+import boto3
+from io import StringIO
+from datetime import datetime
+
+# MySQL configuration
+MYSQL_CONFIG = {
+    'host': 'localhost',        # or your remote host
+    'user': 'root',
+    'password': 'root',
+    'database': 'ROOT',
+    'port': 3306                # default MySQL port
+}
+
+# Generate timestamped filename
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')  # Format: 20250515_193045
+
+
+
+# AWS credentials and S3 bucket info
+AWS_ACCESS_KEY = '******************'
+AWS_SECRET_KEY = '******************'
+BUCKET_NAME = 'du-final-project-offline'
+S3_KEY = f"raw_data/data_{timestamp}.csv" # S3 path where file will be saved
+prefix = 'raw_data/'
+# Initialize S3 client
+s3 = boto3.client(
+    's3',
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY
+)
+
+
+# Step 1: Get latest file
+response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix=prefix)
+latest_file = max(response['Contents'], key=lambda x: x['LastModified'])
+latest_key = latest_file['Key']
+print("Latest file:", latest_key)
+
+# Step 2: Read the file content
+obj = s3.get_object(Bucket=BUCKET_NAME, Key=latest_key)
+data = obj['Body'].read().decode('utf-8')
+
+# Step 3: Load into pandas DataFrame
+df = pd.read_csv(StringIO(data))
+
+# Step 4: Get the last record
+last_record = df.tail(1)
+
+
+# Convert entire DataFrame to string
+df_str = last_record.to_string(index=False,header=False)
+parts = df_str.split()
+first_value = parts[0]
+
+# Establish connection
+conn = pymysql.connect(**MYSQL_CONFIG)
+
+# Write SQL query
+query = f"SELECT * FROM du_project_test_data where id > {first_value};"
+
+# Read data into pandas DataFrame
+df = pd.read_sql(query, conn)
+
+
+# Convert DataFrame to CSV in memory
+csv_buffer = StringIO()
+df.to_csv(csv_buffer, index=False)
+
+
+s3.put_object(Bucket=BUCKET_NAME, Key=S3_KEY, Body=csv_buffer.getvalue())
