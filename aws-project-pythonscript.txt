@@ -21,9 +21,9 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')  # Format: 20250515_193045
 # AWS credentials and S3 bucket info
 AWS_ACCESS_KEY = '******************'
 AWS_SECRET_KEY = '******************'
-BUCKET_NAME = 'du-final-project-offline'
+BUCKET_NAME = 'dataproject'
 S3_KEY = f"raw_data/data_{timestamp}.csv" # S3 path where file will be saved
-prefix = 'raw_data/'
+prefix = 'clean_data/'
 # Initialize S3 client
 s3 = boto3.client(
     's3',
@@ -70,3 +70,4 @@ df.to_csv(csv_buffer, index=False)
 
 
 s3.put_object(Bucket=BUCKET_NAME, Key=S3_KEY, Body=csv_buffer.getvalue())
+
