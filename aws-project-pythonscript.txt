@@ -71,3 +71,10 @@ df.to_csv(csv_buffer, index=False)
 
 s3.put_object(Bucket=BUCKET_NAME, Key=S3_KEY, Body=csv_buffer.getvalue())
 
+#use copy coomnd to put s3 buket to redshift
+COPY my_table
+FROM 's3://my-bucket/cleandata.csv'
+IAM_ROLE 'arn:aws:iam::123456789012:role/MyRedshiftRole'
+FORMAT AS CSV
+IGNOREHEADER 1;
+
